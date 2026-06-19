@@ -1,0 +1,11 @@
+path: c:/Users/SARANKUMAR/Downloads/AgriVision_AI/dataset
+train: train/images
+val: val/images
+
+nc: 5
+names:
+  0: healthy
+  1: wilting
+  2: yellowing
+  3: tip_burn
+  4: dry_leaf

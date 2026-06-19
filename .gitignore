@@ -1,0 +1,38 @@
+# Virtual Environments
+.venv/
+env/
+venv/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE & Editor folders
+.vscode/
+.cursor/
+.sixth/
+.idea/
+.DS_Store
+
+# Large Media Files & Outputs
+*.mp4
+*.avi
+*.mkv
+*.mov
+# If you want to keep sample videos, comment out the lines above
+
+# Datasets
+dataset/
+video_dataset/
+
+# YOLO Training outputs
+runs/
+yolo26n.pt
+# (We exclude 'runs' because it contains heavy training logs. 
+# However, if you want to push your final model weights, you can uncomment the line below)
+# !runs/detect/train/weights/best.pt
+
+# Server Uploads
+static/input_*
+static/output_*

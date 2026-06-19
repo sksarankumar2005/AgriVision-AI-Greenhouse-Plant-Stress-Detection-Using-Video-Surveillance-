@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgriVision AI — Greenhouse Stress Detection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-deep: #0a1410;
+      --bg-card: rgba(18, 32, 26, 0.85);
+      --bg-elevated: rgba(28, 48, 38, 0.6);
+      --border: rgba(120, 200, 150, 0.15);
+      --text: #e8f5ec;
+      --text-muted: #8fb39a;
+      --accent: #3dd68c;
+      --accent-dim: #2a9d63;
+      --warn: #f5c842;
+      --danger: #ff6b6b;
+      --healthy: #4ade80;
+      --radius: 16px;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "DM Sans", system-ui, sans-serif;
+      background: var(--bg-deep);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    .bg-pattern {
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(61, 214, 140, 0.12), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 50%, rgba(42, 157, 99, 0.08), transparent),
+        linear-gradient(180deg, #0a1410 0%, #0d1a14 50%, #0a1410 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 4rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(61, 214, 140, 0.1);
+      border: 1px solid var(--border);
+      padding: 0.35rem 0.85rem;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+    }
+
+    .badge::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s ease infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    h1 {
+      font-family: "Instrument Serif", Georgia, serif;
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 400;
+      line-height: 1.15;
+      margin-bottom: 0.75rem;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+    }
+
+    .upload-card { padding: 1.75rem; }
+
+    .dropzone {
+      border: 2px dashed rgba(61, 214, 140, 0.35);
+      border-radius: 12px;
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      background: rgba(61, 214, 140, 0.03);
+    }
+
+    .dropzone:hover,
+    .dropzone.dragover {
+      border-color: var(--accent);
+      background: rgba(61, 214, 140, 0.08);
+    }
+
+    .dropzone-icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.75rem;
+      opacity: 0.9;
+    }
+
+    .dropzone p { color: var(--text-muted); font-size: 0.95rem; }
+    .dropzone strong { color: var(--text); }
+    .dropzone input { display: none; }
+
+    .file-name {
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      color: var(--accent);
+      word-break: break-all;
+      min-height: 1.25rem;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      margin-top: 1.25rem;
+    }
+
+    .conf-group {
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .conf-group label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+
+    .conf-group input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+      color: #052e16;
+      border: none;
+      padding: 0.85rem 1.75rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.15s, opacity 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      opacity: 0.95;
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .legend {
+      margin-top: 1.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .legend h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .legend-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .legend-chip {
+      font-size: 0.78rem;
+      padding: 0.3rem 0.65rem;
+      border-radius: 6px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+    }
+
+    .legend-chip.stress { border-color: rgba(245, 200, 66, 0.3); color: var(--warn); }
+    .legend-chip.ok { border-color: rgba(74, 222, 128, 0.3); color: var(--healthy); }
+
+    .report-card { padding: 1.25rem; }
+
+    .report-card h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .status-list { display: flex; flex-direction: column; gap: 0.65rem; }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.85rem 1rem;
+      border-radius: 10px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+    }
+
+    .status-item.stress { border-left: 3px solid var(--warn); }
+    .status-item.ok { border-left: 3px solid var(--healthy); }
+
+    .status-label { font-weight: 500; font-size: 0.95rem; }
+    .status-meta { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.15rem; }
+
+    .confidence {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    .confidence.stress { color: var(--warn); }
+
+    .empty-report {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .timeline {
+      margin-top: 1.25rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .timeline h3 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .timeline-item {
+      font-size: 0.85rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      color: var(--text-muted);
+    }
+
+    .timeline-item strong { color: var(--text); }
+
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 20, 16, 0.85);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .loading-overlay.visible {
+      display: flex;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text { color: var(--text-muted); font-size: 0.95rem; }
+
+    .error-banner {
+      display: none;
+      margin-top: 1rem;
+      padding: 0.85rem 1rem;
+      background: rgba(255, 107, 107, 0.12);
+      border: 1px solid rgba(255, 107, 107, 0.35);
+      border-radius: 10px;
+      color: #ffb4b4;
+      font-size: 0.9rem;
+    }
+
+    .error-banner.visible { display: block; }
+
+    .stats-row {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .stat-pill {
+      font-size: 0.78rem;
+      padding: 0.35rem 0.7rem;
+      border-radius: 6px;
+      background: rgba(61, 214, 140, 0.1);
+      color: var(--accent);
+      border: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-pattern"></div>
+  <div class="loading-overlay" id="loading">
+    <div class="spinner"></div>
+    <p class="loading-text" id="loadingText">Running YOLOv26 stress detection…</p>
+  </div>
+
+  <div class="wrap">
+    <header>
+      <div class="badge">YOLOv26 · Real-time monitoring</div>
+      <h1>Greenhouse Plant Stress Detection</h1>
+      <p class="subtitle">
+        Upload greenhouse surveillance images or videos. AI detects wilting, yellowing, tip-burn, and dry leaf stress with confidence scores in the report.
+      </p>
+    </header>
+
+    <div class="grid">
+      <section>
+        <div class="card upload-card">
+          <form id="uploadForm">
+            <div class="dropzone" id="dropzone">
+              <div class="dropzone-icon">🌿</div>
+              <p><strong>Drop image or video here</strong><br />or click to browse</p>
+              <p style="margin-top:0.5rem;font-size:0.8rem;">JPG, PNG, WEBP · MP4, AVI, MOV</p>
+              <input type="file" id="fileInput" name="file" accept="image/*,video/*" required />
+            </div>
+            <p class="file-name" id="fileName"></p>
+
+            <div class="controls">
+              <div class="conf-group">
+                <label>
+                  <span>Confidence threshold</span>
+                  <span id="confValue">15%</span>
+                </label>
+                <input type="range" id="confSlider" min="5" max="95" value="15" />
+              </div>
+              <button type="submit" class="btn-primary" id="submitBtn" disabled>Run Detection</button>
+            </div>
+
+            <div class="error-banner" id="errorBanner"></div>
+
+            <div class="legend">
+              <h3>Detection classes</h3>
+              <div class="legend-items">
+                <span class="legend-chip ok">Healthy</span>
+                <span class="legend-chip stress">Wilting</span>
+                <span class="legend-chip stress">Yellowing</span>
+                <span class="legend-chip stress">Tip-burn</span>
+                <span class="legend-chip stress">Dry Leaf</span>
+              </div>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <aside class="card report-card" id="reportPanel">
+        <h2>📋 Plant Status Report</h2>
+        <div class="stats-row" id="statsRow" style="display:none;"></div>
+        <div class="status-list" id="statusList">
+          <div class="empty-report">Upload media and run detection to see stress analysis.</div>
+        </div>
+        <div class="timeline" id="timelineSection" style="display:none;">
+          <h3>Video frame timeline</h3>
+          <div id="timelineList"></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("uploadForm");
+    const dropzone = document.getElementById("dropzone");
+    const fileInput = document.getElementById("fileInput");
+    const fileName = document.getElementById("fileName");
+    const submitBtn = document.getElementById("submitBtn");
+    const confSlider = document.getElementById("confSlider");
+    const confValue = document.getElementById("confValue");
+    const loading = document.getElementById("loading");
+    const loadingText = document.getElementById("loadingText");
+    const statusList = document.getElementById("statusList");
+    const statsRow = document.getElementById("statsRow");
+    const timelineSection = document.getElementById("timelineSection");
+    const timelineList = document.getElementById("timelineList");
+    const errorBanner = document.getElementById("errorBanner");
+
+    let selectedFile = null;
+
+    confSlider.addEventListener("input", () => {
+      confValue.textContent = confSlider.value + "%";
+    });
+
+    dropzone.addEventListener("click", () => fileInput.click());
+
+    ["dragenter", "dragover"].forEach((evt) => {
+      dropzone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        dropzone.classList.add("dragover");
+      });
+    });
+
+    ["dragleave", "drop"].forEach((evt) => {
+      dropzone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        dropzone.classList.remove("dragover");
+      });
+    });
+
+    dropzone.addEventListener("drop", (e) => {
+      const file = e.dataTransfer.files[0];
+      if (file) setFile(file);
+    });
+
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files[0]) setFile(fileInput.files[0]);
+    });
+
+    function setFile(file) {
+      selectedFile = file;
+      fileName.textContent = file.name;
+      submitBtn.disabled = false;
+      hideError();
+    }
+
+    function showError(msg) {
+      errorBanner.textContent = msg;
+      errorBanner.classList.add("visible");
+    }
+
+    function hideError() {
+      errorBanner.classList.remove("visible");
+    }
+
+    function renderSummary(data) {
+      const summary = data.summary || [];
+      statsRow.style.display = "flex";
+      statsRow.innerHTML = `
+        <span class="stat-pill">Model: ${data.model_name || "best.pt"}</span>
+        <span class="stat-pill">${data.detection_count} regions</span>
+        <span class="stat-pill">${data.media_type === "video" ? data.processed_frames + " frames" : "Image"}</span>
+        ${data.media_type === "video" && data.frame_stride > 1 ? `<span class="stat-pill">Fast mode (every ${data.frame_stride} frames)</span>` : ""}
+        ${data.truncated ? `<span class="stat-pill">First ${data.analyzed_seconds}s analyzed (speed limit)</span>` : ""}
+        ${data.has_stress ? '<span class="stat-pill" style="color:var(--warn)">Stress detected</span>' : '<span class="stat-pill">No stress</span>'}
+        ${data.conf_retried ? '<span class="stat-pill">Auto-lowered confidence for detection</span>' : ""}
+      `;
+
+      if (!summary.length) {
+        const tip = data.media_type === "image"
+          ? "No leaves detected. Lower the slider to 5–10%, use a clear greenhouse photo, or retrain the model with more images (train.py)."
+          : "No stress found in sampled frames. Lower confidence or use a shorter clip.";
+        statusList.innerHTML = `<div class="empty-report">${tip}</div>`;
+        return;
+      }
+
+      statusList.innerHTML = summary.map((item) => {
+        const isStress = item.is_stress;
+        const suffix = isStress ? " Detected" : "";
+        return `
+          <div class="status-item ${isStress ? "stress" : "ok"}">
+            <div>
+              <div class="status-label">${item.label}${suffix}</div>
+              <div class="status-meta">${item.count} region${item.count !== 1 ? "s" : ""}</div>
+            </div>
+            <span class="confidence ${isStress ? "stress" : ""}">${item.max_confidence_pct}%</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderTimeline(timeline) {
+      if (!timeline || !timeline.length) {
+        timelineSection.style.display = "none";
+        return;
+      }
+      timelineSection.style.display = "block";
+      timelineList.innerHTML = timeline.map((entry) => {
+        const labels = entry.summary.length
+          ? entry.summary.map((s) => `${s.label} (${s.max_confidence_pct}%)`).join(", ")
+          : "No detections";
+        return `<div class="timeline-item"><strong>Frame ${entry.frame}</strong> → ${entry.status}<br /><span>${labels}</span></div>`;
+      }).join("");
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!selectedFile) return;
+
+      hideError();
+      timelineSection.style.display = "none";
+      timelineList.innerHTML = "";
+      submitBtn.disabled = true;
+      loading.classList.add("visible");
+      loadingText.textContent = selectedFile.type.startsWith("video/")
+        ? "Analyzing video frames…"
+        : "Analyzing image…";
+
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("conf", (confSlider.value / 100).toFixed(2));
+
+      try {
+        const response = await fetch("/predict", { method: "POST", body: formData });
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || "Detection failed");
+        }
+
+        renderSummary(data);
+        if (data.media_type === "video" && data.timeline && data.timeline.length) {
+          renderTimeline(data.timeline);
+        } else {
+          timelineSection.style.display = "none";
+        }
+      } catch (err) {
+        showError(err.message || "Something went wrong. Check that the server is running.");
+      } finally {
+        loading.classList.remove("visible");
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

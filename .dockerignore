@@ -1,0 +1,15 @@
+# Ignore everything by default
+*
+# Whitelist needed files
+!Dockerfile
+!requirements-docker.txt
+!app.py
+!predict.py
+!runs/detect/train/weights/best.pt
+
+# (optional) UI files – uncomment if you need the web UI
+# !templates/
+# !templates/**
+# !static/
+# !static/**
+
